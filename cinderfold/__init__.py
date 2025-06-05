@@ -1,1 +1,3 @@
-"""cinderfold: schema drift detection."""\n\n__version__ = "0.1.0"
+"""cinderfold: schema drift detection."""
+
+__version__ = "0.1.0"
