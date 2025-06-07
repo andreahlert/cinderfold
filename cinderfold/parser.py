@@ -30,6 +30,7 @@ _TOKEN_RE = re.compile(
     | (?P<comment>//[^\n]*)
     | (?P<string>"(?:[^"\\]|\\.)*")
     | (?P<symbol>[{}:;=])
+    | (?P<number>-?\d+(?:\.\d+)?)
     | (?P<word>[A-Za-z_][\w.()]*)
     """,
     re.VERBOSE,
@@ -54,6 +55,8 @@ def _tokenize(text: str) -> list[tuple[str, str]]:
             tokens.append(("STRING", m.group("string")[1:-1]))
         elif m.group("symbol"):
             tokens.append(("SYM", m.group("symbol")))
+        elif m.group("number"):
+            tokens.append(("NUMBER", m.group("number")))
         elif m.group("word"):
             tokens.append(("WORD", m.group("word")))
     return tokens
@@ -116,7 +119,7 @@ def _parse_column(p: _Parser) -> Column:
         elif k == "WORD" and v == "default":
             p.eat("WORD"); p.eat("SYM", "=")
             tk, tv = p.peek()
-            if tk in ("WORD", "STRING"):
+            if tk in ("WORD", "STRING", "NUMBER"):
                 default = tv
                 p.i += 1
             else:
