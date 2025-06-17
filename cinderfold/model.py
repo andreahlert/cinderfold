@@ -17,14 +17,39 @@ class Column:
 
 
 @dataclass(frozen=True)
+class Index:
+    name: str
+    columns: tuple[str, ...]
+    unique: bool = False
+
+
+@dataclass(frozen=True)
+class ForeignKey:
+    name: str
+    columns: tuple[str, ...]
+    ref_table: str
+    ref_columns: tuple[str, ...]
+    on_delete: str = "no_action"
+    on_update: str = "no_action"
+
+
+@dataclass(frozen=True)
 class Table:
     name: str
     columns: tuple[Column, ...]
+    indexes: tuple[Index, ...] = ()
+    foreign_keys: tuple[ForeignKey, ...] = ()
 
     def column(self, name: str) -> Column | None:
         for c in self.columns:
             if c.name == name:
                 return c
+        return None
+
+    def index(self, name: str) -> Index | None:
+        for i in self.indexes:
+            if i.name == name:
+                return i
         return None
 
 
