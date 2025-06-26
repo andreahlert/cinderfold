@@ -2,11 +2,16 @@
 
 Grammar:
     schema := table*
-    table  := "table" IDENT "{" column* "}"
+    table  := "table" IDENT "{" entry* "}"
+    entry  := column | index | fkey
     column := IDENT ":" TYPE attr* ";"
     attr   := "pk" | "nullable" | "not_null" | "unique"
             | "default" "=" VALUE
             | "comment" "=" STRING
+    index  := "index" IDENT "(" IDENT ("," IDENT)* ")" ["unique"] ";"
+    fkey   := "fk" IDENT "(" IDENT ("," IDENT)* ")"
+              "->" IDENT "(" IDENT ("," IDENT)* ")"
+              ("on_delete" "=" IDENT)? ("on_update" "=" IDENT)? ";"
 
 Example:
 
@@ -14,6 +19,13 @@ Example:
         id: int pk not_null;
         email: text not_null unique;
         created_at: timestamp default = now() comment = "row birth";
+        index ix_users_email (email) unique;
+    }
+
+    table orders {
+        id: int pk not_null;
+        user_id: int not_null;
+        fk fk_orders_user (user_id) -> users (id) on_delete = cascade;
     }
 """
 
@@ -21,7 +33,7 @@ from __future__ import annotations
 
 import re
 
-from .model import Column, Schema, Table
+from .model import Column, ForeignKey, Index, Schema, Table
 
 
 _TOKEN_RE = re.compile(
@@ -29,7 +41,8 @@ _TOKEN_RE = re.compile(
     (?P<ws>\s+)
     | (?P<comment>//[^\n]*)
     | (?P<string>"(?:[^"\\]|\\.)*")
-    | (?P<symbol>[{}:;=])
+    | (?P<arrow>->)
+    | (?P<symbol>[{}():,;=])
     | (?P<number>-?\d+(?:\.\d+)?)
     | (?P<word>[A-Za-z_][\w.()]*)
     """,
@@ -53,6 +66,8 @@ def _tokenize(text: str) -> list[tuple[str, str]]:
             continue
         if m.group("string") is not None:
             tokens.append(("STRING", m.group("string")[1:-1]))
+        elif m.group("arrow"):
+            tokens.append(("ARROW", "->"))
         elif m.group("symbol"):
             tokens.append(("SYM", m.group("symbol")))
         elif m.group("number"):
@@ -90,11 +105,66 @@ def parse(text: str) -> Schema:
         name = p.eat("WORD")
         p.eat("SYM", "{")
         cols: list[Column] = []
+        indexes: list[Index] = []
+        fks: list[ForeignKey] = []
         while not (p.peek() == ("SYM", "}")):
-            cols.append(_parse_column(p))
+            kind, value = p.peek()
+            if kind == "WORD" and value == "index":
+                indexes.append(_parse_index(p))
+            elif kind == "WORD" and value == "fk":
+                fks.append(_parse_fkey(p))
+            else:
+                cols.append(_parse_column(p))
         p.eat("SYM", "}")
-        tables.append(Table(name=name, columns=tuple(cols)))
+        tables.append(Table(name=name, columns=tuple(cols),
+                            indexes=tuple(indexes), foreign_keys=tuple(fks)))
     return Schema(tables=tuple(tables))
+
+
+def _parse_ident_list(p: _Parser) -> tuple[str, ...]:
+    p.eat("SYM", "(")
+    out: list[str] = [p.eat("WORD")]
+    while p.peek() == ("SYM", ","):
+        p.eat("SYM", ",")
+        out.append(p.eat("WORD"))
+    p.eat("SYM", ")")
+    return tuple(out)
+
+
+def _parse_index(p: _Parser) -> Index:
+    p.eat("WORD", "index")
+    name = p.eat("WORD")
+    cols = _parse_ident_list(p)
+    unique = False
+    if p.peek() == ("WORD", "unique"):
+        p.eat("WORD"); unique = True
+    p.eat("SYM", ";")
+    return Index(name=name, columns=cols, unique=unique)
+
+
+def _parse_fkey(p: _Parser) -> ForeignKey:
+    p.eat("WORD", "fk")
+    name = p.eat("WORD")
+    cols = _parse_ident_list(p)
+    p.eat("ARROW")
+    ref_table = p.eat("WORD")
+    ref_cols = _parse_ident_list(p)
+    on_delete = "no_action"
+    on_update = "no_action"
+    while p.peek() != ("SYM", ";"):
+        k, v = p.peek()
+        if k == "WORD" and v == "on_delete":
+            p.eat("WORD"); p.eat("SYM", "=")
+            on_delete = p.eat("WORD")
+        elif k == "WORD" and v == "on_update":
+            p.eat("WORD"); p.eat("SYM", "=")
+            on_update = p.eat("WORD")
+        else:
+            raise ParseError(f"unexpected fk attr {k} {v!r}")
+    p.eat("SYM", ";")
+    return ForeignKey(name=name, columns=cols, ref_table=ref_table,
+                      ref_columns=ref_cols, on_delete=on_delete,
+                      on_update=on_update)
 
 
 def _parse_column(p: _Parser) -> Column:
