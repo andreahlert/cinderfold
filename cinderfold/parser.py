@@ -44,7 +44,7 @@ _TOKEN_RE = re.compile(
     | (?P<arrow>->)
     | (?P<symbol>[{}():,;=])
     | (?P<number>-?\d+(?:\.\d+)?)
-    | (?P<word>[A-Za-z_][\w.()]*)
+    | (?P<word>[A-Za-z_][\w.]*)
     """,
     re.VERBOSE,
 )
@@ -95,6 +95,29 @@ class _Parser:
 
     def at_end(self):
         return self.i >= len(self.tokens)
+
+
+def _parse_value(p: "_Parser") -> str:
+    """A default value: STRING | NUMBER | WORD | WORD '(' ... ')'."""
+    k, v = p.peek()
+    if k == "STRING" or k == "NUMBER":
+        p.i += 1
+        return v
+    if k == "WORD":
+        p.i += 1
+        if p.peek() == ("SYM", "("):
+            p.eat("SYM", "(")
+            inner_parts: list[str] = []
+            while p.peek() != ("SYM", ")"):
+                ik, iv = p.peek()
+                if ik is None:
+                    raise ParseError("unterminated default value")
+                inner_parts.append(iv)
+                p.i += 1
+            p.eat("SYM", ")")
+            return f"{v}({','.join(inner_parts)})"
+        return v
+    raise ParseError(f"bad default value at pos {p.i}")
 
 
 def parse(text: str) -> Schema:
@@ -188,12 +211,7 @@ def _parse_column(p: _Parser) -> Column:
             p.eat("WORD"); unique = True
         elif k == "WORD" and v == "default":
             p.eat("WORD"); p.eat("SYM", "=")
-            tk, tv = p.peek()
-            if tk in ("WORD", "STRING", "NUMBER"):
-                default = tv
-                p.i += 1
-            else:
-                raise ParseError(f"bad default value at pos {p.i}")
+            default = _parse_value(p)
         elif k == "WORD" and v == "comment":
             p.eat("WORD"); p.eat("SYM", "=")
             comment = p.eat("STRING")
