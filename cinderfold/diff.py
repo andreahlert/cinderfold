@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from .model import Column, Schema, Table
+from .model import Column, ForeignKey, Index, Schema, Table
 
 
 Category = Literal["presence", "type", "constraint", "auxiliary"]
@@ -64,6 +64,50 @@ def _diff_table(old: Table, new: Table) -> list[Change]:
     for cname in sorted(old_cols.keys() & new_cols.keys()):
         out.extend(_diff_column(old.name, old_cols[cname], new_cols[cname]))
 
+    out.extend(_diff_indexes(old, new))
+    out.extend(_diff_fks(old, new))
+    return out
+
+
+def _diff_indexes(old: Table, new: Table) -> list[Change]:
+    out: list[Change] = []
+    old_ix = {i.name: i for i in old.indexes}
+    new_ix = {i.name: i for i in new.indexes}
+    for n in sorted(new_ix.keys() - old_ix.keys()):
+        out.append(Change("presence", old.name, n, f"index added on {new_ix[n].columns}"))
+    for n in sorted(old_ix.keys() - new_ix.keys()):
+        out.append(Change("presence", old.name, n, f"index dropped from {old_ix[n].columns}"))
+    for n in sorted(old_ix.keys() & new_ix.keys()):
+        a, b = old_ix[n], new_ix[n]
+        if a.columns != b.columns:
+            out.append(Change("constraint", old.name, n,
+                              f"index columns {a.columns} -> {b.columns}"))
+        if a.unique != b.unique:
+            out.append(Change("constraint", old.name, n,
+                              f"index unique {a.unique} -> {b.unique}"))
+    return out
+
+
+def _diff_fks(old: Table, new: Table) -> list[Change]:
+    out: list[Change] = []
+    old_fk = {f.name: f for f in old.foreign_keys}
+    new_fk = {f.name: f for f in new.foreign_keys}
+    for n in sorted(new_fk.keys() - old_fk.keys()):
+        f = new_fk[n]
+        out.append(Change("presence", old.name, n,
+                          f"fk added {f.columns} -> {f.ref_table}{f.ref_columns}"))
+    for n in sorted(old_fk.keys() - new_fk.keys()):
+        out.append(Change("presence", old.name, n, "fk dropped"))
+    for n in sorted(old_fk.keys() & new_fk.keys()):
+        a, b = old_fk[n], new_fk[n]
+        if (a.columns, a.ref_table, a.ref_columns) != (b.columns, b.ref_table, b.ref_columns):
+            out.append(Change("type", old.name, n, "fk target changed"))
+        if a.on_delete != b.on_delete:
+            out.append(Change("constraint", old.name, n,
+                              f"fk on_delete {a.on_delete} -> {b.on_delete}"))
+        if a.on_update != b.on_update:
+            out.append(Change("constraint", old.name, n,
+                              f"fk on_update {a.on_update} -> {b.on_update}"))
     return out
 
 
