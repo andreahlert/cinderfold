@@ -1,0 +1,97 @@
+import io
+import json
+import sys
+from contextlib import redirect_stdout
+
+import pytest
+
+from cinderfold.cli import main
+
+
+@pytest.fixture
+def tmp_dsl(tmp_path):
+    def write(name, body):
+        p = tmp_path / name
+        p.write_text(body)
+        return str(p)
+    return write
+
+
+def _run(argv):
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc = main(argv)
+    return rc, buf.getvalue()
+
+
+def test_parse_dsl_to_json(tmp_dsl):
+    f = tmp_dsl("a.dsl", "table users { id: int pk not_null; }")
+    rc, out = _run(["parse", f, "--format", "json"])
+    assert rc == 0
+    payload = json.loads(out)
+    assert payload["tables"][0]["name"] == "users"
+
+
+def test_parse_dsl_roundtrip(tmp_dsl):
+    f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
+    rc, out = _run(["parse", f])
+    assert rc == 0
+    assert "table u" in out
+    assert "id: int" in out
+
+
+def test_diff_text(tmp_dsl):
+    a = tmp_dsl("old.dsl", "table u { id: int pk not_null; }")
+    b = tmp_dsl("new.dsl", "table u { id: int pk not_null; email: text not_null; }")
+    rc, out = _run(["diff", a, b])
+    assert rc == 0
+    assert "column added" in out
+
+
+def test_diff_fail_on_presence_exits_nonzero(tmp_dsl):
+    a = tmp_dsl("old.dsl", "table u { id: int pk not_null; }")
+    b = tmp_dsl("new.dsl", "table u { id: int pk not_null; email: text not_null; }")
+    rc, _ = _run(["diff", a, b, "--fail-on", "presence"])
+    assert rc == 1
+
+
+def test_diff_fail_on_higher_than_change_returns_zero(tmp_dsl):
+    a = tmp_dsl("old.dsl", "table u { id: int pk not_null; ts: timestamp not_null; }")
+    b = tmp_dsl("new.dsl", "table u { id: int pk not_null; ts: timestamp not_null default = now(); }")
+    rc, _ = _run(["diff", a, b, "--fail-on", "presence"])
+    assert rc == 0
+
+
+def test_sql2dsl(tmp_dsl):
+    f = tmp_dsl("schema.sql", "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL);")
+    rc, out = _run(["sql2dsl", f])
+    assert rc == 0
+    assert "table users" in out
+    assert "email" in out
+
+
+def test_sqlite2dsl(tmp_dsl):
+    f = tmp_dsl("dotschema.sql",
+                "CREATE TABLE u (id INTEGER PRIMARY KEY, email TEXT);"
+                "CREATE UNIQUE INDEX ix_u_email ON u (email);")
+    rc, out = _run(["sqlite2dsl", f])
+    assert rc == 0
+    assert "index ix_u_email" in out
+
+
+def test_pg2dsl(tmp_dsl):
+    payload = {
+        "tables": [
+            {
+                "name": "users",
+                "columns": [
+                    {"name": "id", "type": "integer", "nullable": False, "pk": True},
+                    {"name": "email", "type": "text", "nullable": False},
+                ],
+            }
+        ]
+    }
+    f = tmp_dsl("pg.json", json.dumps(payload))
+    rc, out = _run(["pg2dsl", f])
+    assert rc == 0
+    assert "table users" in out
