@@ -79,6 +79,29 @@ def test_sqlite2dsl(tmp_dsl):
     assert "index ix_u_email" in out
 
 
+def test_migrate(tmp_dsl):
+    a = tmp_dsl("old.dsl", "table u { id: int pk not_null; }")
+    b = tmp_dsl("new.dsl", "table u { id: int pk not_null; email: text not_null; }")
+    rc, out = _run(["migrate", a, b])
+    assert rc == 0
+    assert "ADD COLUMN email" in out
+
+
+def test_validate_clean(tmp_dsl):
+    f = tmp_dsl("good.dsl", "table u { id: int pk not_null; }")
+    rc, out = _run(["validate", f])
+    assert rc == 0
+    assert out == ""
+
+
+def test_validate_bad(tmp_dsl):
+    f = tmp_dsl("bad.dsl",
+                "table u { id: int pk not_null; id: int not_null; }")
+    rc, out = _run(["validate", f])
+    assert rc == 1
+    assert "duplicate column" in out
+
+
 def test_pg2dsl(tmp_dsl):
     payload = {
         "tables": [

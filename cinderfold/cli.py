@@ -15,12 +15,14 @@ import sys
 from pathlib import Path
 
 from .diff import diff
+from .migrate import migrate
 from .parser import parse
 from .postgres import from_information_schema
 from .render import render
 from .report import to_json, to_markdown, to_text
 from .sql import parse_sql
 from .sqlite import parse_dotschema
+from .validate import validate
 
 
 def _load(path: str):
@@ -66,6 +68,22 @@ def cmd_parse(args) -> int:
     return 0
 
 
+def cmd_migrate(args) -> int:
+    old = _load(args.old)
+    new = _load(args.new)
+    for s in migrate(old, new):
+        sys.stdout.write(s + "\n")
+    return 0
+
+
+def cmd_validate(args) -> int:
+    schema = _load(args.file)
+    issues = validate(schema)
+    for i in issues:
+        sys.stdout.write(f"{i.table}: {i.detail}\n")
+    return 1 if issues else 0
+
+
 def cmd_sql2dsl(args) -> int:
     schema = parse_sql(Path(args.file).read_text())
     sys.stdout.write(render(schema))
@@ -98,6 +116,14 @@ def build_parser() -> argparse.ArgumentParser:
     pa = sub.add_parser("parse")
     pa.add_argument("file"); pa.add_argument("--format", choices=["dsl", "json"], default="dsl")
     pa.set_defaults(fn=cmd_parse)
+
+    m = sub.add_parser("migrate")
+    m.add_argument("old"); m.add_argument("new")
+    m.set_defaults(fn=cmd_migrate)
+
+    v = sub.add_parser("validate")
+    v.add_argument("file")
+    v.set_defaults(fn=cmd_validate)
 
     for cmd, fn in (("sql2dsl", cmd_sql2dsl), ("pg2dsl", cmd_pg2dsl),
                     ("sqlite2dsl", cmd_sqlite2dsl)):
