@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from .diff import diff
+from .html import to_html
 from .migrate import migrate
 from .parser import parse
 from .postgres import from_information_schema
@@ -42,6 +43,8 @@ def cmd_diff(args) -> int:
         sys.stdout.write(to_json(changes))
     elif args.format == "md":
         sys.stdout.write(to_markdown(changes))
+    elif args.format == "html":
+        sys.stdout.write(to_html(changes))
     else:
         sys.stdout.write(to_text(changes))
     return 1 if changes and args.fail_on and _gate(changes, args.fail_on) else 0
@@ -109,7 +112,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     d = sub.add_parser("diff")
     d.add_argument("old"); d.add_argument("new")
-    d.add_argument("--format", choices=["text", "json", "md"], default="text")
+    d.add_argument("--format", choices=["text", "json", "md", "html"], default="text")
     d.add_argument("--fail-on", choices=["presence", "type", "constraint", "auxiliary"])
     d.set_defaults(fn=cmd_diff)
 
