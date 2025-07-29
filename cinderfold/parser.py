@@ -40,6 +40,7 @@ _TOKEN_RE = re.compile(
     r"""
     (?P<ws>\s+)
     | (?P<comment>//[^\n]*)
+    | (?P<block>/\*[\s\S]*?\*/)
     | (?P<string>"(?:[^"\\]|\\.)*")
     | (?P<arrow>->)
     | (?P<symbol>[{}():,;=])
@@ -62,7 +63,7 @@ def _tokenize(text: str) -> list[tuple[str, str]]:
         if not m:
             raise ParseError(f"lex error at {text[pos:pos+20]!r}")
         pos = m.end()
-        if m.group("ws") or m.group("comment"):
+        if m.group("ws") or m.group("comment") or m.group("block"):
             continue
         if m.group("string") is not None:
             tokens.append(("STRING", m.group("string")[1:-1]))
