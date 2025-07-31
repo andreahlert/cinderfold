@@ -87,6 +87,20 @@ def test_migrate(tmp_dsl):
     assert "ADD COLUMN email" in out
 
 
+def test_fingerprint(tmp_dsl):
+    f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
+    rc, out = _run(["fingerprint", f])
+    assert rc == 0
+    assert len(out.strip()) == 64
+
+
+def test_stats(tmp_dsl):
+    f = tmp_dsl("a.dsl", "table u { id: int pk not_null; e: text; }")
+    rc, out = _run(["stats", f])
+    assert rc == 0
+    assert "tables=1" in out and "columns=2" in out
+
+
 def test_validate_clean(tmp_dsl):
     f = tmp_dsl("good.dsl", "table u { id: int pk not_null; }")
     rc, out = _run(["validate", f])

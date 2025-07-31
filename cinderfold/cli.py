@@ -15,8 +15,10 @@ import sys
 from pathlib import Path
 
 from .diff import diff
+from .fingerprint import fingerprint
 from .html import to_html
 from .migrate import migrate
+from .stats import stats
 from .parser import parse
 from .postgres import from_information_schema
 from .render import render
@@ -79,6 +81,24 @@ def cmd_migrate(args) -> int:
     return 0
 
 
+def cmd_fingerprint(args) -> int:
+    schema = _load(args.file)
+    sys.stdout.write(fingerprint(schema) + "\n")
+    return 0
+
+
+def cmd_stats(args) -> int:
+    schema = _load(args.file)
+    s = stats(schema)
+    sys.stdout.write(
+        f"tables={s.tables} columns={s.columns} pks={s.pks} "
+        f"indexes={s.indexes} foreign_keys={s.foreign_keys} "
+        f"not_null={s.not_null_columns} unique={s.unique_columns} "
+        f"density={s.density:.2f}\n"
+    )
+    return 0
+
+
 def cmd_validate(args) -> int:
     schema = _load(args.file)
     issues = validate(schema)
@@ -127,6 +147,14 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate")
     v.add_argument("file")
     v.set_defaults(fn=cmd_validate)
+
+    fp = sub.add_parser("fingerprint")
+    fp.add_argument("file")
+    fp.set_defaults(fn=cmd_fingerprint)
+
+    st = sub.add_parser("stats")
+    st.add_argument("file")
+    st.set_defaults(fn=cmd_stats)
 
     for cmd, fn in (("sql2dsl", cmd_sql2dsl), ("pg2dsl", cmd_pg2dsl),
                     ("sqlite2dsl", cmd_sqlite2dsl)):
