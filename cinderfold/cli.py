@@ -16,6 +16,7 @@ from pathlib import Path
 
 from .diff import diff
 from .dump import dump_sql
+from .filter import filter_changes
 from .fingerprint import fingerprint
 from .html import to_html
 from .migrate import migrate
@@ -43,6 +44,13 @@ def cmd_diff(args) -> int:
     old = _load(args.old)
     new = _load(args.new)
     changes = diff(old, new)
+    if args.include or args.exclude or args.min_severity:
+        changes = filter_changes(
+            changes,
+            min_severity=args.min_severity,
+            include=args.include or None,
+            exclude=args.exclude or None,
+        )
     if args.format == "json":
         sys.stdout.write(to_json(changes))
     elif args.format == "md":
@@ -144,6 +152,12 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("old"); d.add_argument("new")
     d.add_argument("--format", choices=["text", "json", "md", "html"], default="text")
     d.add_argument("--fail-on", choices=["presence", "type", "constraint", "auxiliary"])
+    d.add_argument("--min-severity", choices=["presence", "type", "constraint", "auxiliary"],
+                   help="drop changes below this category")
+    d.add_argument("--include", action="append", default=[],
+                   help="glob of tables to include (repeatable)")
+    d.add_argument("--exclude", action="append", default=[],
+                   help="glob of tables to exclude (repeatable)")
     d.set_defaults(fn=cmd_diff)
 
     pa = sub.add_parser("parse")

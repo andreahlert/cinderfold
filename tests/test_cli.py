@@ -87,6 +87,28 @@ def test_migrate(tmp_dsl):
     assert "ADD COLUMN email" in out
 
 
+def test_diff_with_include(tmp_dsl):
+    a = tmp_dsl("old.dsl",
+                "table u { id: int pk not_null; } table p { id: int pk not_null; }")
+    b = tmp_dsl("new.dsl",
+                "table u { id: int pk not_null; email: text; } "
+                "table p { id: int pk not_null; title: text; }")
+    rc, out = _run(["diff", a, b, "--include", "u"])
+    assert rc == 0
+    assert "email" in out
+    assert "title" not in out
+
+
+def test_diff_with_min_severity(tmp_dsl):
+    a = tmp_dsl("old.dsl",
+                "table u { id: int pk not_null; ts: timestamp not_null; }")
+    b = tmp_dsl("new.dsl",
+                "table u { id: int pk not_null; ts: timestamp not_null default = now(); }")
+    rc, out = _run(["diff", a, b, "--min-severity", "constraint"])
+    assert rc == 0
+    assert "no changes" in out
+
+
 def test_dump(tmp_dsl):
     f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
     rc, out = _run(["dump", f])
