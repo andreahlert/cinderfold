@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from .diff import diff
+from .dump import dump_sql
 from .fingerprint import fingerprint
 from .html import to_html
 from .migrate import migrate
@@ -23,6 +24,7 @@ from .parser import parse
 from .postgres import from_information_schema
 from .render import render
 from .report import to_json, to_markdown, to_text
+from .select import select as schema_select
 from .sql import parse_sql
 from .sqlite import parse_dotschema
 from .validate import validate
@@ -78,6 +80,14 @@ def cmd_migrate(args) -> int:
     new = _load(args.new)
     for s in migrate(old, new):
         sys.stdout.write(s + "\n")
+    return 0
+
+
+def cmd_dump(args) -> int:
+    schema = _load(args.file)
+    if args.select:
+        schema = schema_select(schema, args.select)
+    sys.stdout.write(dump_sql(schema))
     return 0
 
 
@@ -147,6 +157,12 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate")
     v.add_argument("file")
     v.set_defaults(fn=cmd_validate)
+
+    du = sub.add_parser("dump")
+    du.add_argument("file")
+    du.add_argument("--select", action="append", default=[],
+                    help="glob of table names to keep (repeatable)")
+    du.set_defaults(fn=cmd_dump)
 
     fp = sub.add_parser("fingerprint")
     fp.add_argument("file")

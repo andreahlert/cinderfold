@@ -87,6 +87,23 @@ def test_migrate(tmp_dsl):
     assert "ADD COLUMN email" in out
 
 
+def test_dump(tmp_dsl):
+    f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
+    rc, out = _run(["dump", f])
+    assert rc == 0
+    assert "CREATE TABLE u" in out
+
+
+def test_dump_select_filters(tmp_dsl):
+    f = tmp_dsl("a.dsl",
+                "table u { id: int pk not_null; } "
+                "table p { id: int pk not_null; }")
+    rc, out = _run(["dump", f, "--select", "u"])
+    assert rc == 0
+    assert "CREATE TABLE u" in out
+    assert "CREATE TABLE p" not in out
+
+
 def test_fingerprint(tmp_dsl):
     f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
     rc, out = _run(["fingerprint", f])
