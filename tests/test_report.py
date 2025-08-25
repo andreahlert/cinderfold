@@ -47,5 +47,19 @@ def test_markdown_has_table_per_category():
     assert "| Table | Column | Detail |" in out
 
 
+def test_csv():
+    from cinderfold.report import to_csv
+    out = to_csv(_sample())
+    lines = out.strip().splitlines()
+    assert lines[0] == "category,severity,table,column,detail"
+    assert any("orders,2,orders,total" in line or "orders" in line for line in lines)
+
+
+def test_tsv_uses_tabs():
+    from cinderfold.report import to_tsv
+    out = to_tsv(_sample())
+    assert "\t" in out.splitlines()[0]
+
+
 def test_markdown_empty():
     assert "No changes" in to_markdown([])

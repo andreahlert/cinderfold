@@ -8,6 +8,8 @@ Three sinks share the same input (list[Change] from diff.diff):
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from typing import Iterable
 
@@ -53,6 +55,19 @@ def to_json(changes: Iterable[Change]) -> str:
         for c in changes
     ]
     return json.dumps(payload, indent=2) + "\n"
+
+
+def to_csv(changes: Iterable[Change], delimiter: str = ",") -> str:
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=delimiter)
+    w.writerow(["category", "severity", "table", "column", "detail"])
+    for c in changes:
+        w.writerow([c.category, c.severity, c.table, c.column or "", c.detail])
+    return buf.getvalue()
+
+
+def to_tsv(changes: Iterable[Change]) -> str:
+    return to_csv(changes, delimiter="\t")
 
 
 def to_markdown(changes: Iterable[Change]) -> str:
