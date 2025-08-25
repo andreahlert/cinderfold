@@ -109,6 +109,13 @@ def test_diff_with_min_severity(tmp_dsl):
     assert "no changes" in out
 
 
+def test_dot(tmp_dsl):
+    f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
+    rc, out = _run(["dot", f])
+    assert rc == 0
+    assert "digraph schema" in out
+
+
 def test_dump(tmp_dsl):
     f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
     rc, out = _run(["dump", f])

@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from .diff import diff
+from .dot import to_dot
 from .dump import dump_sql
 from .filter import filter_changes
 from .fingerprint import fingerprint
@@ -99,6 +100,12 @@ def cmd_dump(args) -> int:
     return 0
 
 
+def cmd_dot(args) -> int:
+    schema = _load(args.file)
+    sys.stdout.write(to_dot(schema, name=args.name))
+    return 0
+
+
 def cmd_fingerprint(args) -> int:
     schema = _load(args.file)
     sys.stdout.write(fingerprint(schema) + "\n")
@@ -177,6 +184,11 @@ def build_parser() -> argparse.ArgumentParser:
     du.add_argument("--select", action="append", default=[],
                     help="glob of table names to keep (repeatable)")
     du.set_defaults(fn=cmd_dump)
+
+    dt = sub.add_parser("dot")
+    dt.add_argument("file")
+    dt.add_argument("--name", default="schema")
+    dt.set_defaults(fn=cmd_dot)
 
     fp = sub.add_parser("fingerprint")
     fp.add_argument("file")
