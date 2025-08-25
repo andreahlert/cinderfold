@@ -25,7 +25,7 @@ from .stats import stats
 from .parser import parse
 from .postgres import from_information_schema
 from .render import render
-from .report import to_json, to_markdown, to_text
+from .report import to_csv, to_json, to_markdown, to_text, to_tsv
 from .select import select as schema_select
 from .sql import parse_sql
 from .sqlite import parse_dotschema
@@ -58,6 +58,10 @@ def cmd_diff(args) -> int:
         sys.stdout.write(to_markdown(changes))
     elif args.format == "html":
         sys.stdout.write(to_html(changes))
+    elif args.format == "csv":
+        sys.stdout.write(to_csv(changes))
+    elif args.format == "tsv":
+        sys.stdout.write(to_tsv(changes))
     else:
         sys.stdout.write(to_text(changes))
     return 1 if changes and args.fail_on and _gate(changes, args.fail_on) else 0
@@ -157,7 +161,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     d = sub.add_parser("diff")
     d.add_argument("old"); d.add_argument("new")
-    d.add_argument("--format", choices=["text", "json", "md", "html"], default="text")
+    d.add_argument("--format",
+                   choices=["text", "json", "md", "html", "csv", "tsv"],
+                   default="text")
     d.add_argument("--fail-on", choices=["presence", "type", "constraint", "auxiliary"])
     d.add_argument("--min-severity", choices=["presence", "type", "constraint", "auxiliary"],
                    help="drop changes below this category")
