@@ -11,7 +11,7 @@ def test_added_column_is_compatible():
 
 def test_added_default_is_compatible():
     a = parse("table u { id: int pk not_null; n: text; }")
-    b = parse("table u { id: int pk not_null; n: text default = 'x'; }")
+    b = parse("table u { id: int pk not_null; n: text default = \"x\"; }")
     ok, _ = compatible(a, b)
     assert ok
 
