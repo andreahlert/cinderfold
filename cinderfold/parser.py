@@ -41,7 +41,7 @@ _TOKEN_RE = re.compile(
     (?P<ws>\s+)
     | (?P<comment>//[^\n]*)
     | (?P<block>/\*[\s\S]*?\*/)
-    | (?P<string>"(?:[^"\\]|\\.)*")
+    | (?P<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')
     | (?P<arrow>->)
     | (?P<symbol>[{}():,;=])
     | (?P<number>-?\d+(?:\.\d+)?)
