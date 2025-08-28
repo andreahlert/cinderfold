@@ -33,6 +33,9 @@ from .validate import validate
 
 
 def _load(path: str):
+    if path == "-":
+        text = sys.stdin.read()
+        return parse(text)
     text = Path(path).read_text()
     if path.endswith(".sql"):
         return parse_sql(text)

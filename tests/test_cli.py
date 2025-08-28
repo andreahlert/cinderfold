@@ -109,6 +109,13 @@ def test_diff_with_min_severity(tmp_dsl):
     assert "no changes" in out
 
 
+def test_parse_from_stdin(monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO("table u { id: int pk not_null; }"))
+    rc, out = _run(["parse", "-"])
+    assert rc == 0
+    assert "table u" in out
+
+
 def test_dot(tmp_dsl):
     f = tmp_dsl("a.dsl", "table u { id: int pk not_null; }")
     rc, out = _run(["dot", f])
