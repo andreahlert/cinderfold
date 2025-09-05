@@ -96,6 +96,44 @@ adapter from Postgres `information_schema` to `Schema`, so the same
 diff runs against real databases. (iii) Surface the severity-ordered
 changes as a one-page review document, integrating with PR checks.
 
+## Follow-up: indexes, foreign keys, and the rename problem
+
+Beyond columns, two more aspects matter in practice.
+
+*Indexes and foreign keys* are first-class entries in `cinderfold`'s
+model. The DSL grew `index name (cols) [unique];` and `fk name (cols)
+-> table (cols) [on_delete = action] [on_update = action];`. Diff
+classifies an index addition or removal as *presence*, a column-set
+change as *constraint*, and a unique flag flip as *constraint*. For
+foreign keys, a target change is *type* (the type of the referential
+relation has changed), and on_delete/on_update flips are *constraint*.
+
+*Rename detection* is the consistent source of false-positive presence
+changes. cinderfold's `rename.detect_renames` collapses a (drop X, add
+Y) pair into a single rename hint when the structural signatures match.
+For tables, the rule is column-name+type identity; for columns inside a
+kept table, type-and-nullable identity, single match required. The
+collapse is *suggestive*: it lowers presence-change noise but never
+removes a change automatically. A reviewer must accept it.
+
+## Threats to validity
+
+The DSL we mutate is narrower than production SQL. The Postgres adapter
+takes information_schema JSON, which already abstracts over
+expression-index syntax. Migration emission (`migrate`) does not order
+operations to satisfy FK dependencies; downstream tooling must batch
+those. The widening predicate is conservative; some real engines
+broaden it (Postgres allows `numeric` widening with no rewrite). These
+are tractable extensions, not gaps in the classification taxonomy.
+
+## Microbenchmarks
+
+`benchmarks/bench_parse.py` reports ~39k tables/sec for narrow tables
+(5 columns) and ~11k tables/sec for wider tables (20 columns) on a
+laptop. `benchmarks/bench_diff.py` reports diff time scaling roughly
+linearly in the number of tables, dominated by Python dict
+construction. Both are deliberately dependency-free.
+
 ## References
 
 Code: `cinderfold/`. Reproduce with `PYTHONPATH=. python -m
