@@ -14,6 +14,7 @@ Supported statements:
 
 from __future__ import annotations
 
+from .graph import topo_order
 from .model import Column, ForeignKey, Index, Schema, Table
 
 
@@ -25,8 +26,14 @@ def migrate(old: Schema, new: Schema) -> list[str]:
     for name in sorted(old_tables.keys() - new_tables.keys()):
         out.append(f"DROP TABLE {name};")
 
-    for name in sorted(new_tables.keys() - old_tables.keys()):
-        out.append(_create_table(new_tables[name]))
+    added = new_tables.keys() - old_tables.keys()
+    if added:
+        try:
+            order = [n for n in topo_order(new) if n in added]
+        except ValueError:
+            order = sorted(added)
+        for name in order:
+            out.append(_create_table(new_tables[name]))
 
     for name in sorted(old_tables.keys() & new_tables.keys()):
         out.extend(_alter(old_tables[name], new_tables[name]))
