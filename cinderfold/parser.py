@@ -55,13 +55,23 @@ class ParseError(Exception):
     pass
 
 
+def _line_col(text: str, pos: int) -> tuple[int, int]:
+    line = text.count("\n", 0, pos) + 1
+    line_start = text.rfind("\n", 0, pos) + 1
+    col = pos - line_start + 1
+    return line, col
+
+
 def _tokenize(text: str) -> list[tuple[str, str]]:
     tokens: list[tuple[str, str]] = []
     pos = 0
     while pos < len(text):
         m = _TOKEN_RE.match(text, pos)
         if not m:
-            raise ParseError(f"lex error at {text[pos:pos+20]!r}")
+            line, col = _line_col(text, pos)
+            raise ParseError(
+                f"lex error at line {line} col {col}: {text[pos:pos+20]!r}"
+            )
         pos = m.end()
         if m.group("ws") or m.group("comment") or m.group("block"):
             continue
