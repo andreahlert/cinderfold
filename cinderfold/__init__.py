@@ -4,6 +4,7 @@ from .diff import Change, diff
 from .dump import dump_sql
 from .filter import filter_changes
 from .fingerprint import fingerprint, short_fingerprint
+from .lock import Lock, LockMismatch, assert_locked, build_lock, read_lock, write_lock
 from .migrate import migrate
 from .model import Column, ForeignKey, Index, Schema, Table
 from .parser import ParseError, parse
@@ -21,11 +22,12 @@ from .validate import Issue, validate
 __version__ = "0.2.0"
 
 __all__ = [
-    "Change", "Column", "ForeignKey", "Index", "Issue", "ParseError",
-    "RenameHint", "Schema", "Stats", "Table",
-    "detect_renames", "diff", "dump_sql", "exclude",
-    "filter_changes", "fingerprint", "from_dict", "from_information_schema",
-    "from_json", "merge", "migrate", "parse", "parse_dotschema", "parse_sql",
-    "render", "select", "serial_to_json", "short_fingerprint", "stats",
-    "to_dict", "to_json", "to_markdown", "to_text", "validate",
+    "Change", "Column", "ForeignKey", "Index", "Issue", "Lock", "LockMismatch",
+    "ParseError", "RenameHint", "Schema", "Stats", "Table",
+    "assert_locked", "build_lock", "detect_renames", "diff", "dump_sql",
+    "exclude", "filter_changes", "fingerprint", "from_dict",
+    "from_information_schema", "from_json", "merge", "migrate", "parse",
+    "parse_dotschema", "parse_sql", "read_lock", "render", "select",
+    "serial_to_json", "short_fingerprint", "stats", "to_dict", "to_json",
+    "to_markdown", "to_text", "validate", "write_lock",
 ]
