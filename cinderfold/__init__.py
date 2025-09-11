@@ -7,6 +7,7 @@ from .fingerprint import fingerprint, short_fingerprint
 from .lock import Lock, LockMismatch, assert_locked, build_lock, read_lock, write_lock
 from .migrate import migrate
 from .model import Column, ForeignKey, Index, Schema, Table
+from .mysql import dump_mysql
 from .parser import ParseError, parse
 from .postgres import from_information_schema
 from .render import render
@@ -24,7 +25,7 @@ __version__ = "0.2.0"
 __all__ = [
     "Change", "Column", "ForeignKey", "Index", "Issue", "Lock", "LockMismatch",
     "ParseError", "RenameHint", "Schema", "Stats", "Table",
-    "assert_locked", "build_lock", "detect_renames", "diff", "dump_sql",
+    "assert_locked", "build_lock", "detect_renames", "diff", "dump_mysql", "dump_sql",
     "exclude", "filter_changes", "fingerprint", "from_dict",
     "from_information_schema", "from_json", "merge", "migrate", "parse",
     "parse_dotschema", "parse_sql", "read_lock", "render", "select",
