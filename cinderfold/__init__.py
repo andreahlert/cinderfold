@@ -1,5 +1,6 @@
 """cinderfold: schema drift detection."""
 
+from .audit import AuditEntry, audit, to_markdown as audit_to_markdown
 from .diff import Change, diff
 from .dump import dump_sql
 from .filter import filter_changes
@@ -23,9 +24,10 @@ from .validate import Issue, validate
 __version__ = "0.2.0"
 
 __all__ = [
-    "Change", "Column", "ForeignKey", "Index", "Issue", "Lock", "LockMismatch",
+    "AuditEntry", "Change", "Column", "ForeignKey", "Index", "Issue", "Lock", "LockMismatch",
     "ParseError", "RenameHint", "Schema", "Stats", "Table",
-    "assert_locked", "build_lock", "detect_renames", "diff", "dump_mysql", "dump_sql",
+    "assert_locked", "audit", "audit_to_markdown", "build_lock",
+    "detect_renames", "diff", "dump_mysql", "dump_sql",
     "exclude", "filter_changes", "fingerprint", "from_dict",
     "from_information_schema", "from_json", "merge", "migrate", "parse",
     "parse_dotschema", "parse_sql", "read_lock", "render", "select",
